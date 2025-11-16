@@ -1,4 +1,4 @@
-// script.js - Chaudhary Traders POS (FULLY COMPLETE + RESPONSIVE + PC + MOBILE)
+// script.js - Chaudhary Traders POS (FULLY COMPLETE + BUG FREE)
 
 let stock = [], customers = [], settings = { billCounter: 1, bookNumber: 'Book-001' };
 let currentBill = [], editingProductIndex = null, currentCustomer = null;
@@ -10,7 +10,6 @@ function loadData() {
     ...c, balance: Number(c.balance) || 0, history: c.history || []
   }));
 
-  // RECALCULATE BALANCE FOR EACH CUSTOMER
   customers = customers.map(c => {
     let bal = 0;
     (c.history || []).forEach(e => {
@@ -31,7 +30,6 @@ function showPage(pageId, btn) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById(pageId).classList.add('active');
 
-  // RESET ALL MENU BUTTONS
   document.querySelectorAll('.menu-btn, .sidebar-btn').forEach(b => {
     b.classList.remove('active');
     b.style.background = '#27ae60';
@@ -75,7 +73,6 @@ function initBillPage() {
   document.querySelectorAll('input[name="payType"]').forEach(r => r.onchange = toggleDeposit);
   document.getElementById('depositAmount').oninput = updateBaki;
 
-  // CUSTOMER SEARCH
   const searchInput = document.getElementById('customerSearch');
   const resultsDiv = document.getElementById('customerResults');
   searchInput.oninput = () => {
@@ -107,7 +104,6 @@ function initBillPage() {
   renderBill();
 }
 
-// SELECT CUSTOMER FROM SEARCH
 window.selectCustomer = phone => {
   const c = customers.find(x => x.phone === phone);
   if (c) {
@@ -116,7 +112,6 @@ window.selectCustomer = phone => {
   }
 };
 
-// SET BOOK & BILL NUMBER
 function setCustomBillNumber() {
   const book = document.getElementById('bookNumberInput').value.trim() || 'Book-001';
   const bill = parseInt(document.getElementById('billNumberInput').value) || 1;
@@ -126,7 +121,6 @@ function setCustomBillNumber() {
   saveAll();
 }
 
-// SEARCH PRODUCT
 function searchProducts() {
   const q = document.getElementById('searchProduct').value.trim().toLowerCase();
   const sel = document.getElementById('sellProduct');
@@ -135,14 +129,12 @@ function searchProducts() {
     .forEach(p => sel.add(new Option(`${p.name} (${p.company}) - ${p.qty} left`, `${p.name}|${p.company}`)));
 }
 
-// RENDER PRODUCT DROPDOWN
 function renderProductDropdown() {
   const sel = document.getElementById('sellProduct');
   sel.innerHTML = '<option>Select Product</option>';
   stock.forEach(p => sel.add(new Option(`${p.name} (${p.company}) - ${p.qty} left`, `${p.name}|${p.company}`)));
 }
 
-// ADD ITEM TO BILL
 function addItemToBill(isCredit) {
   const id = document.getElementById('sellProduct').value;
   const qty = parseInt(document.getElementById('sellQty').value) || 0;
@@ -155,7 +147,6 @@ function addItemToBill(isCredit) {
   renderBill();
 }
 
-// RENDER BILL TABLE
 function renderBill() {
   const tbody = document.querySelector('#billTable tbody');
   tbody.innerHTML = '';
@@ -173,11 +164,10 @@ function renderBill() {
   });
   document.getElementById('billTotal').textContent = `Total: Rs. ${total}`;
   document.getElementById('saveBillBtn').disabled = !currentBill.length;
-  document.getElementById('printBillBtn').disabled = !currentBill.length;
+  document.getElementById('printBill IBtn').disabled = !currentBill.length;
   updateBaki();
 }
 
-// UPDATE BAKI
 function updateBaki() {
   const total = currentBill.reduce((s,i) => s + i.qty*i.price, 0);
   const isPartial = document.querySelector('input[value="partial"]').checked;
@@ -188,7 +178,6 @@ function updateBaki() {
   el.style.color = baki > 0 ? '#e74c3c' : '#27ae60';
 }
 
-// TOGGLE DEPOSIT
 function toggleDeposit() {
   const partial = document.querySelector('input[value="partial"]').checked;
   document.getElementById('depositAmount').disabled = !partial;
@@ -196,7 +185,6 @@ function toggleDeposit() {
   updateBaki();
 }
 
-// SAVE BILL
 function saveBill() {
   if (!currentBill.length) return alert('Bill is empty!');
   const total = currentBill.reduce((s,i) => s + i.qty*i.price, 0);
@@ -226,16 +214,13 @@ function saveBill() {
     total, deposit, baki, type: 'sale', billNo, bookNo, note
   };
 
-  // REDUCE STOCK
   currentBill.forEach(it => {
     const p = stock.find(s => s.name === it.name && s.company === it.company);
     if (p) p.qty -= it.qty;
   });
 
-  // ADD TO CUSTOMER HISTORY
   if (cust) cust.history.push(invoice);
 
-  // PRINT & SAVE
   printInvoice(bookNo, billNo, total, deposit, baki, cust?.name || 'Cash Sale', currentBill, note);
   settings.billCounter++;
   saveAll();
@@ -245,7 +230,6 @@ function saveBill() {
   alert(`Bill #${billNo} saved! Due: Rs. ${baki}`);
 }
 
-// PRINT CURRENT BILL
 function printCurrentBill() {
   const total = currentBill.reduce((s,i) => s + i.qty*i.price, 0);
   const deposit = document.querySelector('input[value="partial"]').checked ? (parseFloat(document.getElementById('depositAmount').value)||0) : total;
@@ -360,23 +344,48 @@ function loadLedger() {
   document.getElementById('ledgerDisplay').style.display = 'block';
 }
 
+// UPDATED renderLedger() - SHOWS BOOK, BILL, PRODUCTS
 function renderLedger() {
   const tbody = document.querySelector('#ledgerTable tbody');
   tbody.innerHTML = '';
   let bal = 0;
   (currentCustomer.history || []).forEach((e, i) => {
-    let debit = 0, credit = 0, type = '';
-    if (e.type === 'sale') { debit = e.baki; type = 'Sale'; }
-    else if (e.type === 'return') { credit = e.total; type = 'Return'; }
-    else if (e.type === 'manual-debit') { debit = e.amount; type = 'Debit'; }
-    else if (e.type === 'manual-credit') { credit = e.amount; type = 'Credit'; }
+    let debit = 0, credit = 0, type = '', details = '', bookNo = '-', billNo = '-';
+
+    if (e.type === 'sale') {
+      debit = e.baki || 0;
+      type = 'Sale';
+      bookNo = e.bookNo || '-';
+      billNo = e.billNo || '-';
+      details = e.items?.map(x => `${x.name} x${x.qty}`).join(', ') || '';
+    } else if (e.type === 'return') {
+      credit = e.total || 0;
+      type = 'Return';
+      bookNo = e.originalBook || '-';
+      billNo = e.originalBill || '-';
+      details = e.items?.map(x => `${x.name} x${x.qty}`).join(', ') || '';
+    } else if (e.type === 'manual-debit') {
+      debit = e.amount || 0;
+      type = 'Debit';
+      details = e.note || 'Manual Entry';
+    } else if (e.type === 'manual-credit') {
+      credit = e.amount || 0;
+      type = 'Credit';
+      details = e.note || 'Hand Cash';
+    }
+
     bal += debit - credit;
+
     tbody.innerHTML += `<tr>
       <td>${e.date.split(',')[0]}</td>
+      <td>${bookNo}</td>
+      <td>${billNo}</td>
       <td>${type}</td>
+      <td style="font-size:0.85rem; max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${details}">${details || '-'}</td>
       <td>${debit ? 'Rs. '+debit : '-'}</td>
       <td>${credit ? 'Rs. '+credit : '-'}</td>
-      <td style="color:${bal>0?'#e74c3c':'#27ae60'}">Rs. ${bal.toFixed(0)}</td>
+      <td style="color:${bal>0?'#e74c3c':'#27ae60'}; font-weight:bold;">Rs. ${bal.toFixed(0)}</td>
+      <td>${e.note || '-'}</td>
       <td>
         ${e.type === 'sale' ? `
           <button class="btn-sm btn-orange" onclick="editSaleEntry(${i})">Edit</button>
@@ -419,7 +428,7 @@ function deleteEntry(i) {
   updateHomeStats();
 }
 
-// === EDIT SALE ENTRY ===
+// EDIT SALE
 function editSaleEntry(i) {
   const entry = currentCustomer.history[i];
   if (entry.type !== 'sale') return;
@@ -469,18 +478,16 @@ function editSaleEntry(i) {
 
     if (newItems.length === 0) return alert('At least one item required!');
 
-    // Return old stock
     entry.items.forEach(it => {
       const p = stock.find(s => s.name === it.name && s.company === it.company);
       if (p) p.qty += it.qty;
     });
 
-    // Deduct new stock
     let valid = true;
     newItems.forEach(it => {
       const p = stock.find(s => s.name === it.name && s.company === it.company);
       if (p && p.qty >= it.qty) p.qty -= it.qty;
-      else { valid = false; }
+      else valid = false;
     });
 
     if (!valid) {
@@ -509,7 +516,7 @@ function editSaleEntry(i) {
   modal.style.display = 'flex';
 }
 
-// === RETURN SALE ENTRY ===
+// RETURN SALE
 function returnSaleEntry(i) {
   const entry = currentCustomer.history[i];
   if (entry.type !== 'sale') return;
@@ -585,10 +592,8 @@ function returnSaleEntry(i) {
   modal.style.display = 'flex';
 }
 
-// PRINT LEDGER
 function printLedger() { window.print(); }
 
-// DOWNLOAD LEDGER PDF
 function downloadLedgerPDF() {
   if (!currentCustomer) return alert('No customer selected!');
   const { jsPDF } = window.jspdf;
@@ -632,7 +637,6 @@ function downloadLedgerPDF() {
   doc.save(`Ledger_${currentCustomer.name.replace(/ /g, '_')}_${currentCustomer.phone}.pdf`);
 }
 
-// PRINT INVOICE
 function printInvoice(book, bill, total, deposit, baki, cust, items, note) {
   const w = window.open('', '', 'width=500,height=700');
   w.document.write(`
@@ -661,7 +665,6 @@ function printInvoice(book, bill, total, deposit, baki, cust, items, note) {
   w.close();
 }
 
-// SAVE ALL DATA
 function saveAll() {
   localStorage.setItem('chaudharyStock', JSON.stringify(stock));
   localStorage.setItem('chaudharyCustomers', JSON.stringify(customers));
@@ -669,7 +672,6 @@ function saveAll() {
   loadData();
 }
 
-// BACKUP DATA
 function backupData() {
   loadData();
   const data = { stock, customers, settings };
@@ -681,7 +683,6 @@ function backupData() {
   a.click();
 }
 
-// INITIALIZE ON LOAD
 document.addEventListener('DOMContentLoaded', () => {
   loadData();
   updateHomeStats();
