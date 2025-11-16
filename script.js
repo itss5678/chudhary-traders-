@@ -377,7 +377,13 @@ function renderLedger() {
       <td>${debit ? 'Rs. '+debit : '-'}</td>
       <td>${credit ? 'Rs. '+credit : '-'}</td>
       <td style="color:${bal>0?'#e74c3c':'#27ae60'}">Rs. ${bal.toFixed(0)}</td>
-      <td><button class="btn-red btn-sm" onclick="deleteEntry(${i})">Del</button></td>
+      <td>
+        ${e.type === 'sale' ? `
+          <button class="btn-sm btn-orange" onclick="editSaleEntry(${i})">Edit</button>
+          <button class="btn-sm" style="background:#9b59b6;" onclick="returnSaleEntry(${i})">Return</button>
+        ` : ''}
+        <button class="btn-red btn-sm" onclick="deleteEntry(${i})">Del</button>
+      </td>
     </tr>`;
   });
 }
@@ -410,12 +416,177 @@ function deleteEntry(i) {
   currentCustomer.history.splice(i, 1);
   saveAll();
   renderLedger();
+  updateHomeStats();
+}
+
+// === EDIT SALE ENTRY ===
+function editSaleEntry(i) {
+  const entry = currentCustomer.history[i];
+  if (entry.type !== 'sale') return;
+
+  const modal = document.getElementById('editModal');
+  const itemsDiv = document.getElementById('editItems');
+  itemsDiv.innerHTML = '';
+
+  entry.items.forEach((item, idx) => {
+    const amt = item.qty * item.price;
+    itemsDiv.innerHTML += `
+      <div style="display:flex;gap:8px;margin:8px 0;align-items:center;">
+        <input type="text" value="${item.name} (${item.company})" disabled style="flex:2;font-size:0.9rem;">
+        <input type="number" value="${item.qty}" id="editQty${idx}" style="flex:1;" min="1">
+        <input type="number" value="${item.price}" id="editPrice${idx}" style="flex:1;" step="0.01">
+        <span style="flex:1;text-align:right;">Rs. <span id="amt${idx}">${amt}</span></span>
+      </div>`;
+  });
+
+  setTimeout(() => {
+    entry.items.forEach((_, idx) => {
+      const qtyInput = document.getElementById(`editQty${idx}`);
+      const priceInput = document.getElementById(`editPrice${idx}`);
+      const amtSpan = document.getElementById(`amt${idx}`);
+      const update = () => {
+        const q = parseInt(qtyInput.value) || 0;
+        const p = parseFloat(priceInput.value) || 0;
+        amtSpan.textContent = (q * p).toFixed(0);
+      };
+      qtyInput.oninput = priceInput.oninput = update;
+    });
+  }, 100);
+
+  document.getElementById('editNote').value = entry.note || '';
+
+  window.saveEdit = function() {
+    const newItems = [];
+    let newTotal = 0;
+    entry.items.forEach((_, idx) => {
+      const qty = parseInt(document.getElementById(`editQty${idx}`).value) || 0;
+      const price = parseFloat(document.getElementById(`editPrice${idx}`).value) || 0;
+      if (qty > 0 && price > 0) {
+        newItems.push({ ...entry.items[idx], qty, price });
+        newTotal += qty * price;
+      }
+    });
+
+    if (newItems.length === 0) return alert('At least one item required!');
+
+    // Return old stock
+    entry.items.forEach(it => {
+      const p = stock.find(s => s.name === it.name && s.company === it.company);
+      if (p) p.qty += it.qty;
+    });
+
+    // Deduct new stock
+    let valid = true;
+    newItems.forEach(it => {
+      const p = stock.find(s => s.name === it.name && s.company === it.company);
+      if (p && p.qty >= it.qty) p.qty -= it.qty;
+      else { valid = false; }
+    });
+
+    if (!valid) {
+      alert('Not enough stock!');
+      entry.items.forEach(it => {
+        const p = stock.find(s => s.name === it.name && s.company === it.company);
+        if (p) p.qty -= it.qty;
+      });
+      return;
+    }
+
+    const newBaki = newTotal - entry.deposit;
+    entry.items = newItems;
+    entry.total = newTotal;
+    entry.baki = newBaki;
+    entry.note = document.getElementById('editNote').value || '—';
+
+    saveAll();
+    renderLedger();
+    updateHomeStats();
+    modal.style.display = 'none';
+    alert('Sale updated!');
+  };
+
+  window.cancelEdit = function() { modal.style.display = 'none'; };
+  modal.style.display = 'flex';
+}
+
+// === RETURN SALE ENTRY ===
+function returnSaleEntry(i) {
+  const entry = currentCustomer.history[i];
+  if (entry.type !== 'sale') return;
+
+  const modal = document.getElementById('returnModal');
+  const itemsDiv = document.getElementById('returnItems');
+  itemsDiv.innerHTML = '';
+
+  entry.items.forEach((item, idx) => {
+    const maxQty = item.qty;
+    itemsDiv.innerHTML += `
+      <div style="display:flex;gap:8px;margin:8px 0;align-items:center;">
+        <input type="text" value="${item.name} (${item.company})" disabled style="flex:2;font-size:0.9rem;">
+        <input type="number" value="${maxQty}" id="returnQty${idx}" style="flex:1;" min="0" max="${maxQty}">
+        <span style="flex:1;text-align:right;">Rs. ${item.price}</span>
+        <span style="flex:1;text-align:right;">Return: Rs. <span id="returnAmt${idx}">${item.qty * item.price}</span></span>
+      </div>`;
+  });
+
+  setTimeout(() => {
+    entry.items.forEach((_, idx) => {
+      const qtyInput = document.getElementById(`returnQty${idx}`);
+      const amtSpan = document.getElementById(`returnAmt${idx}`);
+      qtyInput.oninput = () => {
+        const q = Math.min(parseInt(qtyInput.value) || 0, entry.items[idx].qty);
+        qtyInput.value = q;
+        amtSpan.textContent = (q * entry.items[idx].price).toFixed(0);
+      };
+    });
+  }, 100);
+
+  document.getElementById('returnNote').value = '';
+
+  window.saveReturn = function() {
+    const returnItems = [];
+    let returnTotal = 0;
+
+    entry.items.forEach((item, idx) => {
+      const returnQty = parseInt(document.getElementById(`returnQty${idx}`).value) || 0;
+      if (returnQty > 0) {
+        returnItems.push({ ...item, qty: returnQty });
+        returnTotal += returnQty * item.price;
+      }
+    });
+
+    if (returnItems.length === 0) return alert('Select items to return!');
+
+    returnItems.forEach(it => {
+      const p = stock.find(s => s.name === it.name && s.company === it.company);
+      if (p) p.qty += it.qty;
+    });
+
+    currentCustomer.history.push({
+      date: new Date().toLocaleString('en-GB'),
+      type: 'return',
+      items: returnItems,
+      total: returnTotal,
+      note: document.getElementById('returnNote').value || 'Return',
+      originalBill: entry.billNo,
+      originalBook: entry.bookNo
+    });
+
+    entry.baki = Math.max(0, entry.baki - returnTotal);
+
+    saveAll();
+    renderLedger();
+    updateHomeStats();
+    modal.style.display = 'none';
+    alert(`Return saved! Rs. ${returnTotal} credited.`);
+  };
+
+  window.cancelReturn = function() { modal.style.display = 'none'; };
+  modal.style.display = 'flex';
 }
 
 // PRINT LEDGER
-function printLedger() {
-  window.print();
-}
+function printLedger() { window.print(); }
 
 // DOWNLOAD LEDGER PDF
 function downloadLedgerPDF() {
