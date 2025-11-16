@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Customer Ledger - Chaudhary Traders</title>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+  <style>
+    body { margin:0; padding:0; font-family:'Poppins',sans-serif; background:#f5f7fa; }
+    .container { max-width:900px; margin:20px auto; background:#fff; border-radius:12px; overflow:hidden; box-shadow:0 6px 20px rgba(0,0,0,.1); }
+    .header { background:linear-gradient(135deg,#27ae60,#1e8449); color:#fff; padding:20px; text-align:center; }
+    .header h2 { margin:0; font-size:1.8rem; font-weight:600; }
+    .info { padding:15px 20px; background:#f1f8f5; text-align:center; font-size:1.1rem; }
+    .info p { margin:6px 0; }
+    .balance { font-weight:bold; font-size:1.3rem; }
+
+    table { width:100%; border-collapse:collapse; }
+    th, td { border:1px solid #e0e0e0; padding:10px; text-align:center; font-size:.95rem; }
+    th { background:#27ae60; color:#fff; font-weight:600; }
+    .details { text-align:left; color:#555; }
+
+    .debit { color:#e74c3c; }
+    .credit { color:#27ae60; }
+    .balance-positive { color:#e74c3c; }
+    .balance-negative { color:#27ae60; }
+
+    .btn-group { padding:15px; text-align:center; background:#f1f8f5; display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
+    .btn { padding:10px 18px; border:none; border-radius:8px; color:#fff; font-weight:600; cursor:pointer; font-size:1rem; transition:.3s; }
+    .print-btn { background:#27ae60; }
+    .pdf-btn   { background:#e67e22; }
+    .close-btn { background:#34495e; }
+    .print-btn:hover { background:#1e8449; }
+    .pdf-btn:hover   { background:#d35400; }
+    .close-btn:hover { background:#2c3e50; }
+
+    .search-container { padding:30px; background:#fff; }
+    #searchInput { width:100%; padding:14px; border:1.5px solid #b2e4c6; border-radius:10px; font-size:1.1rem; }
+    #customerList { max-height:500px; overflow-y:auto; border:1px solid #ddd; border-radius:8px; margin-top:15px; }
+    .customer-item { padding:16px; border-bottom:1px solid #eee; cursor:pointer; display:flex; justify-content:space-between; transition:.2s; }
+    .customer-item:hover { background:#f8fff9; }
+    .no-data { padding:30px; text-align:center; color:#95a5a6; font-size:1.1rem; }
+
+    @media print {
+      .btn-group, .search-container { display:none; }
+      .container { box-shadow:none; border-radius:0; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="mainContent">Loading...</div>
+
+<script>
+  // ---------- Load data ----------
+  let customers = [];
+  try { 
+    customers = JSON.parse(localStorage.getItem('chaudharyCustomers')) || []; 
+  } catch { 
+    customers = []; 
+  }
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const phone = urlParams.get('customer');
+  const main = document.getElementById('mainContent');
+
+  // ---------- CASE 1: No customer → show list ----------
+  if (!phone) { 
+    showCustomerList(); 
+    return; 
+  }
+
+  // ---------- CASE 2: Show ledger ----------
+  const cust = customers.find(c => c.phone === phone);
+  if (!cust) {
+    main.innerHTML = `<div class="container"><div class="header"><h2>Error</h2></div>
+      <div class="info" style="color:red;">Customer not found: ${phone}</div></div>`;
+    return;
+  }
+
+  let running = 0;
+  const rows = (cust.history || []).map(e => {
+    let debit = 0, credit = 0, type = '', details = '';
+
+    if (e.type === 'sale') {
+      debit = e.baki || 0;
+      details = e.items?.map(x => `${x.name} x${x.qty}`).join(', ') || '';
+      type = 'Sale';
+    } else if (e.type === 'return') {
+      credit = e.total || 0;
+      details = e.items?.map(x => `${x.name} x${x.qty}`).join(', ') || '';
+      type = 'Return';
+    } else if (e.type === 'manual-debit') {
+      debit = e.amount || 0;
+      type = 'Debit';
+      details = 'Manual Entry';
+    } else if (e.type === 'manual-credit') {
+      credit = e.amount || 0;
+      type = 'Credit';
+      details = 'Hand Cash';
+    }
+
+    running += debit - credit;
+
+    return `<tr>
+      <td>${e.date || '-'}</td>
+      <td>${e.bookNo || '-'}</td>
+      <td>${e.billNo || '-'}</td>
+      <td>${type}</td>
+      <td class="details">${details}</td>
+      <td class="debit">${debit || '-'}</td>
+      <td class="credit">${credit || '-'}</td>
+      <td class="${running>0?'balance-positive':'balance-negative'}"><b>${running}</b></td>
+      <td>${e.note || '-'}</td>
+    </tr>`;
+  }).join('');
+
+  main.innerHTML = `
+    <div class="container">
+      <div class="header"><h2>${cust.name}</h2></div>
+      <div class="info">
+        <p>Phone: ${cust.phone}</p>
+        <p class="balance" style="color:${cust.balance>0?'red':'green'}">
+          Total Due: Rs. ${cust.balance?.toFixed(2) || '0.00'}
+        </p>
+      </div>
+
+      <div class="btn-group">
+        <button class="btn print-btn" onclick="window.print()">Print</button>
+        <button class="btn pdf-btn"   onclick="downloadPDF()">Download PDF</button>
+        <button class="btn close-btn" onclick="window.close()">Close</button>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th><th>Book</th><th>Bill</th><th>Type</th><th>Details</th>
+            <th>Debit</th><th>Credit</th><th>Balance</th><th>Note</th>
+          </tr>
+        </thead>
+        <tbody>${rows || '<tr><td colspan="9" class="no-data">No entries</td></tr>'}</tbody>
+      </table>
+    </div>`;
+
+  // ---------- PDF ----------
+  function downloadPDF() {
+    const el = document.querySelector('.container');
+    html2pdf().from(el).set({
+      margin:10,
+      filename: `${cust.name.replace(/[^a-zA-Z0-9]/g,'_')}_Ledger.pdf`,
+      html2canvas:{scale:2},
+      jsPDF:{unit:'mm',format:'a4'}
+    }).save();
+  }
+
+  // ---------- SEARCH LIST ----------
+  function showCustomerList() {
+    main.innerHTML = `
+      <div class="container">
+        <div class="header"><h2>Select Customer</h2></div>
+        <div class="search-container">
+          <input type="text" id="searchInput" placeholder="Search by name or phone..." />
+          <div id="customerList"></div>
+        </div>
+      </div>`;
+
+    const list = document.getElementById('customerList');
+    const search = document.getElementById('searchInput');
+
+    if (!customers.length) {
+      list.innerHTML = `<div class="no-data">No customers added.</div>`;
+      return;
+    }
+
+    function render(q='') {
+      q = q.toLowerCase();
+      const filtered = customers.filter(c =>
+        c.name.toLowerCase().includes(q) || c.phone.includes(q)
+      );
+      list.innerHTML = filtered.length
+        ? filtered.map(c=>`
+            <div class="customer-item" onclick="location.href='ledger.html?customer=${c.phone}'">
+              <div><strong>${c.name}</strong><br><small>${c.phone}</small></div>
+              <div style="font-weight:bold;color:${c.balance>0?'red':'green'}">
+                Rs. ${c.balance?.toFixed(2)||'0'}
+              </div>
+            </div>`).join('')
+        : `<div class="no-data">No match found</div>`;
+    }
+    render();
+    search.oninput = () => render(search.value);
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,451 @@
+/* ========================================
+   Chaudhary Traders - Complete Style Sheet
+   ======================================== */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Poppins', sans-serif;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  color: #2c3e50;
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+header {
+  background: linear-gradient(135deg, #27ae60, #1e8449);
+  color: white;
+  text-align: center;
+  padding: 20px 15px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  position: relative;
+  z-index: 10;
+}
+
+header h1 {
+  font-size: 2rem;
+  margin-bottom: 5px;
+  font-weight: 700;
+}
+
+header p {
+  font-size: 0.9rem;
+  opacity: 0.9;
+  font-style: italic;
+}
+
+.main-wrapper {
+  display: flex;
+  min-height: calc(100vh - 100px);
+  gap: 20px;
+  padding: 20px;
+  flex-wrap: wrap;
+}
+
+.menu-box {
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  min-width: 200px;
+  flex: 1;
+  max-width: 250px;
+}
+
+.menu-box h3 {
+  margin-bottom: 15px;
+  color: #27ae60;
+  font-size: 1.2rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.menu-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.menu-buttons button {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  background: #ecf0f1;
+  color: #2c3e50;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 1rem;
+}
+
+.menu-buttons button:hover {
+  background: #bdc3c7;
+  transform: translateY(-1px);
+}
+
+.container {
+  background: white;
+  padding: 25px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  flex: 3;
+  min-width: 300px;
+}
+
+.page {
+  display: none;
+}
+
+.page.active {
+  display: block;
+  animation: fadeIn 0.4s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+h2, h3 {
+  color: #27ae60;
+  margin-bottom: 15px;
+  font-weight: 600;
+}
+
+h2 {
+  font-size: 1.6rem;
+  text-align: center;
+}
+
+h3 {
+  font-size: 1.3rem;
+  border-bottom: 2px solid #27ae60;
+  padding-bottom: 8px;
+}
+
+input, select, button, textarea {
+  width: 100%;
+  padding: 12px 14px;
+  margin: 8px 0;
+  border: 1.5px solid #b2e4c6;
+  border-radius: 10px;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: #27ae60;
+  box-shadow: 0 0 0 3px rgba(39, 174, 96, 0.2);
+}
+
+button {
+  background: linear-gradient(135deg, #27ae60, #1e8449);
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  font-size: 1rem;
+}
+
+button:hover {
+  background: linear-gradient(135deg, #1e8449, #27ae60);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+button:disabled {
+  background: #95a5a6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.bill-number-controls,
+.customer-search-controls,
+.bill-controls,
+.payment-options,
+.add-manual {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 15px 0;
+  align-items: center;
+}
+
+.bill-number-controls > div,
+.add-manual > * {
+  flex: 1;
+  min-width: 120px;
+}
+
+.bill-number-controls label {
+  font-weight: 600;
+  color: #2c3e50;
+  min-width: 60px;
+}
+
+#addNewCustomerBtn {
+  background: linear-gradient(135deg, #27ae60, #1e8449);
+  color: white;
+  padding: 12px 16px;
+  font-weight: 600;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  white-space: nowrap;
+  min-width: 140px;
+}
+
+#addNewCustomerBtn:hover {
+  background: linear-gradient(135deg, #1e8449, #27ae60);
+}
+
+#customerResults,
+#ledgerResults {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  max-height: 150px;
+  overflow-y: auto;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  margin-top: 5px;
+  z-index: 100;
+}
+
+#customerResults > div,
+#ledgerResults > div {
+  padding: 10px;
+  border-bottom: 1px solid #eee;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+#customerResults > div:hover,
+#ledgerResults > div:hover {
+  background: #f8fff9;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 15px 0;
+  font-size: 0.95rem;
+}
+
+th, td {
+  border: 1px solid #ddd;
+  padding: 10px;
+  text-align: center;
+}
+
+th {
+  background: #27ae60;
+  color: white;
+  font-weight: 600;
+}
+
+td img {
+  border-radius: 6px;
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+}
+
+.btn {
+  padding: 6px 10px;
+  margin: 2px;
+  border: none;
+  border-radius: 6px;
+  color: white;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.delete-btn {
+  background: #e74c3c;
+}
+
+.delete-btn:hover {
+  background: #c0392b;
+}
+
+.stats {
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+  margin: 20px 0;
+}
+
+.stat-card {
+  background: #f8fff9;
+  border: 2px solid #27ae60;
+  border-radius: 12px;
+  padding: 15px;
+  flex: 1;
+  min-width: 150px;
+  text-align: center;
+  transition: transform 0.3s;
+}
+
+.stat-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+}
+
+.stat-card h3 {
+  font-size: 0.9rem;
+  color: #27ae60;
+  margin-bottom: 5px;
+  font-weight: 600;
+}
+
+.stat-card p {
+  font-size: 1.4rem;
+  font-weight: bold;
+  color: #2c3e50;
+}
+
+.quick-actions {
+  display: flex;
+  gap: 10px;
+  margin: 20px 0;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.action-btn {
+  background: linear-gradient(135deg, #3498db, #2980b9);
+  color: white;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  min-width: 160px;
+}
+
+.action-btn:hover {
+  background: linear-gradient(135deg, #2980b9, #3498db);
+  transform: translateY(-2px);
+}
+
+.modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+  padding: 20px;
+}
+
+.modal-content {
+  background: white;
+  padding: 25px;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+  animation: modalPop 0.3s ease;
+}
+
+@keyframes modalPop {
+  from { transform: scale(0.9); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.modal-content h3 {
+  margin-bottom: 15px;
+  color: #27ae60;
+  text-align: center;
+}
+
+.modal-content input,
+.modal-content button {
+  margin: 8px 0;
+}
+
+.modal-content button {
+  width: 48%;
+  display: inline-block;
+}
+
+.modal-content button:first-of-type {
+  background: #95a5a6;
+}
+
+.modal-content button:first-of-type:hover {
+  background: #7f8c8d;
+}
+
+.modal-content button:last-of-type {
+  background: #27ae60;
+}
+
+.modal-content button:last-of-type:hover {
+  background: #1e8449;
+}
+
+@media (max-width: 992px) {
+  .main-wrapper {
+    flex-direction: column;
+  }
+  .menu-box {
+    max-width: 100%;
+    order: -1;
+  }
+  .container {
+    flex: none;
+  }
+}
+
+@media (max-width: 600px) {
+  header h1 {
+    font-size: 1.6rem;
+  }
+  .bill-number-controls,
+  .customer-search-controls,
+  .bill-controls,
+  .payment-options {
+    flex-direction: column;
+  }
+  .action-btn,
+  #addNewCustomerBtn {
+    width: 100%;
+  }
+  .stats {
+    flex-direction: column;
+  }
+  .stat-card {
+    min-width: 100%;
+  }
+}
+
+@media print {
+  body, .container {
+    background: white !important;
+  }
+  .menu-box, .quick-actions, button, input, select {
+    display: none !important;
+  }
+  .page {
+    display: block !important;
+  }
+  table {
+    font-size: 12px;
+  }
+}
