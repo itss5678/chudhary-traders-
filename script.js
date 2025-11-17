@@ -1,4 +1,4 @@
-// script.js - Chaudhary Traders POS (FULLY COMPLETE + ALL BUGS FIXED)
+// script.js - Chaudhary Traders POS (ALL BUGS FIXED + SEARCH WORKING)
 
 let stock = [], customers = [], settings = { billCounter: 1, bookNumber: 'Book-001' };
 let currentBill = [], editingProductIndex = null, currentCustomer = null;
@@ -58,7 +58,7 @@ function updateHomeStats() {
 // BILL PAGE
 function initBillPage() {
   loadData();
-  renderProductDropdown(); // ← FIXED: Load products on page open
+  renderProductDropdown(); // Load products on page open
   document.getElementById('bookNumberInput').value = settings.bookNumber;
   document.getElementById('billNumberInput').value = settings.billCounter;
 
@@ -68,15 +68,19 @@ function initBillPage() {
   document.getElementById('saveBillBtn').onclick = saveBill;
   document.getElementById('printBillBtn').onclick = printCurrentBill;
   document.getElementById('searchProductBtn').onclick = searchProducts;
-  document.getElementById('searchProduct').oninput = () => { if (!this.value.trim()) renderProductDropdown(); };
 
-  document.querySelectorAll('input[name="payType"]').forEach(r => r.onchange = toggleDeposit);
-  document.getElementById('depositAmount').oninput = updateBaki;
+  // FIXED: Search clear karne pe full list wapas
+  const searchInput = document.getElementById('searchProduct');
+  searchInput.addEventListener('input', function() {
+    if (!this.value.trim()) {
+      renderProductDropdown();
+    }
+  });
 
-  const searchInput = document.getElementById('customerSearch');
+  const customerSearch = document.getElementById('customerSearch');
   const resultsDiv = document.getElementById('customerResults');
-  searchInput.oninput = () => {
-    const q = searchInput.value.trim().toLowerCase();
+  customerSearch.oninput = () => {
+    const q = customerSearch.value.trim().toLowerCase();
     if (!q) { resultsDiv.style.display = 'none'; return; }
     const matches = customers.filter(c => c.name.toLowerCase().includes(q) || c.phone.includes(q));
     resultsDiv.innerHTML = matches.length
@@ -103,10 +107,8 @@ function initBillPage() {
   currentBill = [];
   renderBill();
 
-  // ← FIXED: Search clear karne pe full list wapas
-  document.getElementById('searchProduct').addEventListener('input', function() {
-    if (!this.value.trim()) renderProductDropdown();
-  });
+  document.querySelectorAll('input[name="payType"]').forEach(r => r.onchange = toggleDeposit);
+  document.getElementById('depositAmount').oninput = updateBaki;
 }
 
 window.selectCustomer = phone => {
@@ -126,9 +128,10 @@ function setCustomBillNumber() {
   saveAll();
 }
 
-// FIXED: Search Product (100% working)
+// FIXED: Search Product (100% WORKING)
 function searchProducts() {
-  const q = document.getElementById('searchProduct').value.trim().toLowerCase();
+  const input = document.getElementById('searchProduct');
+  const q = input.value.trim().toLowerCase();
   const sel = document.getElementById('sellProduct');
   sel.innerHTML = '<option value="">Select Product</option>';
 
@@ -138,7 +141,8 @@ function searchProducts() {
   }
 
   const matches = stock.filter(p => 
-    p.name.toLowerCase().includes(q) || p.company.toLowerCase().includes(q)
+    p.name.toLowerCase().includes(q) || 
+    p.company.toLowerCase().includes(q)
   );
 
   if (matches.length === 0) {
@@ -151,7 +155,7 @@ function searchProducts() {
   sel.dispatchEvent(new Event('change'));
 }
 
-// FIXED: renderProductDropdown (with refresh)
+// FIXED: renderProductDropdown
 function renderProductDropdown() {
   const sel = document.getElementById('sellProduct');
   sel.innerHTML = '<option value="">Select Product</option>';
@@ -619,7 +623,7 @@ function returnSaleEntry(i) {
 
 function printLedger() { window.print(); }
 
-// FIXED: PDF Download (perfect spacing + no errors)
+// FIXED: PDF Download (wide spacing + no errors)
 function downloadLedgerPDF() {
   if (!currentCustomer) {
     alert('Pehle customer select karein!');
@@ -638,17 +642,15 @@ function downloadLedgerPDF() {
     const pageHeight = doc.internal.pageSize.getHeight();
     let y = 40;
 
-    // Header
     doc.setFontSize(16);
     doc.text('Chaudhary Traders - Customer Ledger', pageWidth / 2, 15, { align: 'center' });
     doc.setFontSize(11);
     doc.text(`Customer: ${currentCustomer.name} (${currentCustomer.phone})`, 15, 25);
     doc.text(`Total Due: Rs. ${currentCustomer.balance.toFixed(0)}`, 15, 32);
 
-    // Table Header
     doc.setFontSize(9);
     const headers = ['Date', 'Book', 'Bill', 'Type', 'Details', 'Debit', 'Credit', 'Bal'];
-    const colX = [15, 35, 55, 72, 90, 130, 155, 180]; // ← WIDE SPACING
+    const colX = [15, 35, 55, 72, 90, 130, 155, 180];
     headers.forEach((h, i) => doc.text(String(h), colX[i], y));
     y += 3;
     doc.line(15, y, pageWidth - 15, y);
@@ -713,11 +715,9 @@ function downloadLedgerPDF() {
       y += lineHeight;
     });
 
-    // Footer
     doc.setFontSize(8);
     doc.text('Generated: ' + new Date().toLocaleString('en-PK'), 15, pageHeight - 10);
 
-    // Save
     const safeName = currentCustomer.name.replace(/[^a-zA-Z0-9]/g, '_');
     doc.save(`Ledger_${safeName}_${currentCustomer.phone}.pdf`);
 
