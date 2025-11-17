@@ -1,5 +1,4 @@
 // script.js - Chaudhary Traders POS (ALL BUGS FIXED + SEARCH WORKING)
-
 let stock = [], customers = [], settings = { billCounter: 1, bookNumber: 'Book-001' };
 let currentBill = [], editingProductIndex = null, currentCustomer = null;
 
@@ -9,7 +8,6 @@ function loadData() {
   customers = (JSON.parse(localStorage.getItem('chaudharyCustomers')) || []).map(c => ({
     ...c, balance: Number(c.balance) || 0, history: c.history || []
   }));
-
   customers = customers.map(c => {
     let bal = 0;
     (c.history || []).forEach(e => {
@@ -21,7 +19,6 @@ function loadData() {
     c.balance = Number(bal.toFixed(2));
     return c;
   });
-
   settings = JSON.parse(localStorage.getItem('chaudharySettings')) || { billCounter: 1, bookNumber: 'Book-001' };
 }
 
@@ -29,17 +26,14 @@ function loadData() {
 function showPage(pageId, btn) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById(pageId).classList.add('active');
-
   document.querySelectorAll('.menu-btn, .sidebar-btn').forEach(b => {
     b.classList.remove('active');
     b.style.background = '#27ae60';
   });
-
   if (btn) {
     btn.classList.add('active');
     btn.style.background = '#1e8449';
   }
-
   if (pageId === 'bill') initBillPage();
   if (pageId === 'stock') initStockPage();
   if (pageId === 'ledger') initLedgerPage();
@@ -58,10 +52,9 @@ function updateHomeStats() {
 // BILL PAGE
 function initBillPage() {
   loadData();
-  renderProductDropdown(); // Load products on page open
+  renderProductDropdown();
   document.getElementById('bookNumberInput').value = settings.bookNumber;
   document.getElementById('billNumberInput').value = settings.billCounter;
-
   document.getElementById('setBillNumberBtn').onclick = setCustomBillNumber;
   document.getElementById('addToBillNet').onclick = () => addItemToBill(false);
   document.getElementById('addToBillCredit').onclick = () => addItemToBill(true);
@@ -69,7 +62,6 @@ function initBillPage() {
   document.getElementById('printBillBtn').onclick = printCurrentBill;
   document.getElementById('searchProductBtn').onclick = searchProducts;
 
-  // FIXED: Search clear karne pe full list wapas
   const searchInput = document.getElementById('searchProduct');
   searchInput.addEventListener('input', function() {
     if (!this.value.trim()) {
@@ -106,7 +98,6 @@ function initBillPage() {
 
   currentBill = [];
   renderBill();
-
   document.querySelectorAll('input[name="payType"]').forEach(r => r.onchange = toggleDeposit);
   document.getElementById('depositAmount').oninput = updateBaki;
 }
@@ -128,23 +119,19 @@ function setCustomBillNumber() {
   saveAll();
 }
 
-// FIXED: Search Product (100% WORKING)
 function searchProducts() {
   const input = document.getElementById('searchProduct');
   const q = input.value.trim().toLowerCase();
   const sel = document.getElementById('sellProduct');
   sel.innerHTML = '<option value="">Select Product</option>';
-
   if (!q) {
     renderProductDropdown();
     return;
   }
-
-  const matches = stock.filter(p => 
-    p.name.toLowerCase().includes(q) || 
+  const matches = stock.filter(p =>
+    p.name.toLowerCase().includes(q) ||
     p.company.toLowerCase().includes(q)
   );
-
   if (matches.length === 0) {
     sel.innerHTML += '<option disabled>No product found</option>';
   } else {
@@ -155,7 +142,6 @@ function searchProducts() {
   sel.dispatchEvent(new Event('change'));
 }
 
-// FIXED: renderProductDropdown
 function renderProductDropdown() {
   const sel = document.getElementById('sellProduct');
   sel.innerHTML = '<option value="">Select Product</option>';
@@ -226,7 +212,6 @@ function saveBill() {
   const billNo = settings.billCounter;
   const bookNo = settings.bookNumber;
   const note = document.getElementById('othersNote').value || '—';
-
   let cust = null;
   if (phone) {
     cust = customers.find(c => c.phone === phone);
@@ -237,20 +222,16 @@ function saveBill() {
       customers.push(cust);
     }
   }
-
   const invoice = {
     date: new Date().toLocaleString('en-GB'),
     items: currentBill.map(i => ({ name: i.name, company: i.company, qty: i.qty, price: i.price })),
     total, deposit, baki, type: 'sale', billNo, bookNo, note
   };
-
   currentBill.forEach(it => {
     const p = stock.find(s => s.name === it.name && s.company === it.company);
     if (p) p.qty -= it.qty;
   });
-
   if (cust) cust.history.push(invoice);
-
   printInvoice(bookNo, billNo, total, deposit, baki, cust?.name || 'Cash Sale', currentBill, note);
   settings.billCounter++;
   saveAll();
@@ -307,7 +288,6 @@ function saveProduct(e) {
   const creditRate = parseFloat(document.getElementById('creditRate').value) || netPrice;
   const file = document.getElementById('productImage').files[0];
   let image = stock[editingProductIndex]?.image || '';
-
   if (file) {
     const reader = new FileReader();
     reader.onload = () => { image = reader.result; finalizeProduct({name, company, qty, netPrice, creditRate, image}); };
@@ -349,12 +329,60 @@ function deleteProduct(i) {
   }
 }
 
-// LEDGER PAGE
+// LEDGER PAGE - WITH SEARCH (ADDED)
 function initLedgerPage() {
   loadData();
   populateLedgerCustomerDropdown();
   document.getElementById('ledgerDisplay').style.display = 'none';
+
+  // SEARCH BAR FOR LEDGER
+  const searchInput = document.getElementById('ledgerCustomerSearch');
+  const resultsDiv = document.getElementById('ledgerCustomerResults');
+
+  searchInput.oninput = () => {
+    const q = searchInput.value.trim().toLowerCase();
+    if (!q) {
+      resultsDiv.style.display = 'none';
+      return;
+    }
+
+    const matches = customers.filter(c => 
+      c.name.toLowerCase().includes(q) || 
+      c.phone.includes(q)
+    );
+
+    resultsDiv.innerHTML = matches.length
+      ? matches.map(c => `
+          <div onclick="selectLedgerCustomer('${c.phone}')" 
+               style="padding:12px; border-bottom:1px solid #eee; cursor:pointer; background:#f9f9f9;">
+            <strong>${c.name}</strong> (${c.phone}) 
+            <span style="color:#e74c3c; font-size:0.9rem;">Due: Rs. ${c.balance}</span>
+          </div>
+        `).join('')
+      : '<div style="padding:12px; color:#e74c3c;">Customer not found</div>';
+
+    resultsDiv.style.display = 'block';
+  };
+
+  // Hide on click outside
+  document.addEventListener('click', (e) => {
+    if (!searchInput.contains(e.target) && !resultsDiv.contains(e.target)) {
+      resultsDiv.style.display = 'none';
+    }
+  });
 }
+
+// SELECT FROM SEARCH
+window.selectLedgerCustomer = (phone) => {
+  const sel = document.getElementById('ledgerCustomerSelect');
+  sel.value = phone;
+  document.getElementById('ledgerCustomerResults').style.display = 'none';
+  const c = customers.find(c => c.phone === phone);
+  if (c) {
+    document.getElementById('ledgerCustomerSearch').value = `${c.name} (${c.phone})`;
+  }
+  loadLedger();
+};
 
 function populateLedgerCustomerDropdown() {
   const sel = document.getElementById('ledgerCustomerSelect');
@@ -380,7 +408,6 @@ function renderLedger() {
   let bal = 0;
   (currentCustomer.history || []).forEach((e, i) => {
     let debit = 0, credit = 0, type = '', details = '', bookNo = '-', billNo = '-';
-
     if (e.type === 'sale') {
       debit = e.baki || 0;
       type = 'Sale';
@@ -402,9 +429,7 @@ function renderLedger() {
       type = 'Credit';
       details = e.note || 'Hand Cash';
     }
-
     bal += debit - credit;
-
     tbody.innerHTML += `<tr>
       <td>${e.date.split(',')[0]}</td>
       <td>${bookNo}</td>
@@ -461,11 +486,9 @@ function deleteEntry(i) {
 function editSaleEntry(i) {
   const entry = currentCustomer.history[i];
   if (entry.type !== 'sale') return;
-
   const modal = document.getElementById('editModal');
   const itemsDiv = document.getElementById('editItems');
   itemsDiv.innerHTML = '';
-
   entry.items.forEach((item, idx) => {
     const amt = item.qty * item.price;
     itemsDiv.innerHTML += `
@@ -476,7 +499,6 @@ function editSaleEntry(i) {
         <span style="flex:1;text-align:right;">Rs. <span id="amt${idx}">${amt}</span></span>
       </div>`;
   });
-
   setTimeout(() => {
     entry.items.forEach((_, idx) => {
       const qtyInput = document.getElementById(`editQty${idx}`);
@@ -490,9 +512,7 @@ function editSaleEntry(i) {
       qtyInput.oninput = priceInput.oninput = update;
     });
   }, 100);
-
   document.getElementById('editNote').value = entry.note || '';
-
   window.saveEdit = function() {
     const newItems = [];
     let newTotal = 0;
@@ -504,21 +524,17 @@ function editSaleEntry(i) {
         newTotal += qty * price;
       }
     });
-
     if (newItems.length === 0) return alert('At least one item required!');
-
     entry.items.forEach(it => {
       const p = stock.find(s => s.name === it.name && s.company === it.company);
       if (p) p.qty += it.qty;
     });
-
     let valid = true;
     newItems.forEach(it => {
       const p = stock.find(s => s.name === it.name && s.company === it.company);
       if (p && p.qty >= it.qty) p.qty -= it.qty;
       else valid = false;
     });
-
     if (!valid) {
       alert('Not enough stock!');
       entry.items.forEach(it => {
@@ -527,20 +543,17 @@ function editSaleEntry(i) {
       });
       return;
     }
-
     const newBaki = newTotal - entry.deposit;
     entry.items = newItems;
     entry.total = newTotal;
     entry.baki = newBaki;
     entry.note = document.getElementById('editNote').value || '—';
-
     saveAll();
     renderLedger();
     updateHomeStats();
     modal.style.display = 'none';
     alert('Sale updated!');
   };
-
   window.cancelEdit = function() { modal.style.display = 'none'; };
   modal.style.display = 'flex';
 }
@@ -549,11 +562,9 @@ function editSaleEntry(i) {
 function returnSaleEntry(i) {
   const entry = currentCustomer.history[i];
   if (entry.type !== 'sale') return;
-
   const modal = document.getElementById('returnModal');
   const itemsDiv = document.getElementById('returnItems');
   itemsDiv.innerHTML = '';
-
   entry.items.forEach((item, idx) => {
     const maxQty = item.qty;
     itemsDiv.innerHTML += `
@@ -564,7 +575,6 @@ function returnSaleEntry(i) {
         <span style="flex:1;text-align:right;">Return: Rs. <span id="returnAmt${idx}">${item.qty * item.price}</span></span>
       </div>`;
   });
-
   setTimeout(() => {
     entry.items.forEach((_, idx) => {
       const qtyInput = document.getElementById(`returnQty${idx}`);
@@ -576,13 +586,10 @@ function returnSaleEntry(i) {
       };
     });
   }, 100);
-
   document.getElementById('returnNote').value = '';
-
   window.saveReturn = function() {
     const returnItems = [];
     let returnTotal = 0;
-
     entry.items.forEach((item, idx) => {
       const returnQty = parseInt(document.getElementById(`returnQty${idx}`).value) || 0;
       if (returnQty > 0) {
@@ -590,14 +597,11 @@ function returnSaleEntry(i) {
         returnTotal += returnQty * item.price;
       }
     });
-
     if (returnItems.length === 0) return alert('Select items to return!');
-
     returnItems.forEach(it => {
       const p = stock.find(s => s.name === it.name && s.company === it.company);
       if (p) p.qty += it.qty;
     });
-
     currentCustomer.history.push({
       date: new Date().toLocaleString('en-GB'),
       type: 'return',
@@ -607,47 +611,39 @@ function returnSaleEntry(i) {
       originalBill: entry.billNo,
       originalBook: entry.bookNo
     });
-
     entry.baki = Math.max(0, entry.baki - returnTotal);
-
     saveAll();
     renderLedger();
     updateHomeStats();
     modal.style.display = 'none';
     alert(`Return saved! Rs. ${returnTotal} credited.`);
   };
-
   window.cancelReturn = function() { modal.style.display = 'none'; };
   modal.style.display = 'flex';
 }
 
 function printLedger() { window.print(); }
 
-// FIXED: PDF Download (wide spacing + no errors)
 function downloadLedgerPDF() {
   if (!currentCustomer) {
     alert('Pehle customer select karein!');
     return;
   }
-
   if (!window.jspdf) {
     alert('PDF library load nahi hui. Refresh karein.');
     return;
   }
-
   try {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('p', 'mm', 'a4');
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
     let y = 40;
-
     doc.setFontSize(16);
     doc.text('Chaudhary Traders - Customer Ledger', pageWidth / 2, 15, { align: 'center' });
     doc.setFontSize(11);
     doc.text(`Customer: ${currentCustomer.name} (${currentCustomer.phone})`, 15, 25);
     doc.text(`Total Due: Rs. ${currentCustomer.balance.toFixed(0)}`, 15, 32);
-
     doc.setFontSize(9);
     const headers = ['Date', 'Book', 'Bill', 'Type', 'Details', 'Debit', 'Credit', 'Bal'];
     const colX = [15, 35, 55, 72, 90, 130, 155, 180];
@@ -655,10 +651,8 @@ function downloadLedgerPDF() {
     y += 3;
     doc.line(15, y, pageWidth - 15, y);
     y += 8;
-
     let bal = 0;
     const lineHeight = 6.5;
-
     (currentCustomer.history || []).forEach(e => {
       if (y > pageHeight - 30) {
         doc.addPage();
@@ -667,9 +661,7 @@ function downloadLedgerPDF() {
         doc.line(15, y - 6, pageWidth - 15, y - 6);
         y += 2;
       }
-
       let debit = 0, credit = 0, type = '', details = '', bookNo = '-', billNo = '-';
-
       if (e.type === 'sale') {
         debit = e.baki || 0;
         type = 'Sale';
@@ -691,12 +683,9 @@ function downloadLedgerPDF() {
         type = 'Credit';
         details = e.note || 'Hand Cash';
       }
-
       bal += debit - credit;
-
       const maxLen = 32;
       const shortDetails = details.length > maxLen ? details.substring(0, maxLen) + '...' : details;
-
       const rowData = [
         e.date.split(',')[0] || '-',
         bookNo,
@@ -707,22 +696,16 @@ function downloadLedgerPDF() {
         credit ? `Rs.${credit}` : '-',
         `Rs.${bal.toFixed(0)}`
       ];
-
       rowData.forEach((text, i) => {
         doc.text(String(text), colX[i], y);
       });
-
       y += lineHeight;
     });
-
     doc.setFontSize(8);
     doc.text('Generated: ' + new Date().toLocaleString('en-PK'), 15, pageHeight - 10);
-
     const safeName = currentCustomer.name.replace(/[^a-zA-Z0-9]/g, '_');
     doc.save(`Ledger_${safeName}_${currentCustomer.phone}.pdf`);
-
     alert('PDF Downloaded Successfully!');
-
   } catch (error) {
     console.error('PDF Error:', error);
     alert('Error: ' + error.message);
