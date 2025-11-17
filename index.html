@@ -110,7 +110,7 @@
       <div id="stock" class="page">
         <h3>Stock Management</h3>
         <form id="productForm">
-          <input type="text" id="productName" placeholder="Product Name" required />
+          <input type="add" id="productName" placeholder="Product Name" required />
           <input type="text" id="companyName" placeholder="Company" required />
           <input type="number" id="quantity" placeholder="Quantity" min="0" required />
           <input type="number" id="netPrice" placeholder="Net Price" step="0.01" required />
@@ -124,9 +124,16 @@
         <table id="stockTable"><thead><tr><th>Img</th><th>Name</th><th>Qty</th><th>Price</th><th>Actions</th></tr></thead><tbody></tbody></table>
       </div>
 
-      <!-- LEDGER PAGE -->
+      <!-- LEDGER PAGE - SEARCH BAR ADDED -->
       <div id="ledger" class="page">
         <h3>Customer Ledger</h3>
+
+        <!-- Customer Search Bar -->
+        <div class="customer-search-controls" style="margin-bottom:10px;">
+          <input type="text" id="ledgerCustomerSearch" placeholder="Search Customer by Name/Phone" />
+          <div id="ledgerCustomerResults" style="display:none; max-height:200px; overflow-y:auto; border:1px solid #ddd; background:#fff;"></div>
+        </div>
+
         <select id="ledgerCustomerSelect" style="margin-bottom:10px;"></select>
         <button onclick="loadLedger()" class="btn-sm" style="margin-bottom:15px;">View Ledger</button>
         <div id="ledgerDisplay" style="display:none;">
