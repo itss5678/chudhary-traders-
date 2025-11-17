@@ -22,7 +22,7 @@ function loadData() {
   settings = JSON.parse(localStorage.getItem('chaudharySettings')) || { billCounter: 1, bookNumber: 'Book-001' };
 }
 
-// PAGE SWITCH
+// PAGE SWITCH - FIXED FOR GITHUB PAGES
 function showPage(pageId, btn) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById(pageId).classList.add('active');
@@ -34,10 +34,16 @@ function showPage(pageId, btn) {
     btn.classList.add('active');
     btn.style.background = '#1e8449';
   }
+
+  // INIT PAGES ON EVERY SWITCH
+  if (pageId === 'home') updateHomeStats();
   if (pageId === 'bill') initBillPage();
   if (pageId === 'stock') initStockPage();
-  if (pageId === 'ledger') initLedgerPage();
-  if (pageId === 'home') updateHomeStats();
+  if (pageId === 'ledger') {
+    loadData(); // Ensure latest data
+    populateLedgerCustomerDropdown();
+    initLedgerSearch(); // Initialize search every time
+  }
 }
 
 // HOME PAGE
@@ -329,15 +335,15 @@ function deleteProduct(i) {
   }
 }
 
-// LEDGER PAGE - WITH SEARCH (ADDED)
-function initLedgerPage() {
-  loadData();
-  populateLedgerCustomerDropdown();
-  document.getElementById('ledgerDisplay').style.display = 'none';
-
-  // SEARCH BAR FOR LEDGER
+// LEDGER SEARCH INITIALIZER (NEW)
+function initLedgerSearch() {
   const searchInput = document.getElementById('ledgerCustomerSearch');
   const resultsDiv = document.getElementById('ledgerCustomerResults');
+
+  if (!searchInput || !resultsDiv) return;
+
+  // Remove old listener
+  searchInput.oninput = null;
 
   searchInput.oninput = () => {
     const q = searchInput.value.trim().toLowerCase();
@@ -364,12 +370,17 @@ function initLedgerPage() {
     resultsDiv.style.display = 'block';
   };
 
-  // Hide on click outside
-  document.addEventListener('click', (e) => {
-    if (!searchInput.contains(e.target) && !resultsDiv.contains(e.target)) {
-      resultsDiv.style.display = 'none';
-    }
-  });
+  // Hide results when clicking outside
+  document.removeEventListener('click', hideLedgerResults);
+  document.addEventListener('click', hideLedgerResults);
+}
+
+function hideLedgerResults(e) {
+  const searchInput = document.getElementById('ledgerCustomerSearch');
+  const resultsDiv = document.getElementById('ledgerCustomerResults');
+  if (searchInput && resultsDiv && !searchInput.contains(e.target) && !resultsDiv.contains(e.target)) {
+    resultsDiv.style.display = 'none';
+  }
 }
 
 // SELECT FROM SEARCH
